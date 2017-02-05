@@ -1,5 +1,6 @@
 package com.calabozo.facedetector;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.openimaj.image.FImage;
@@ -36,19 +37,40 @@ public class App {
 
 		display.addVideoListener(new VideoDisplayListener<MBFImage>() {
 			FaceDetector<KEDetectedFace, FImage> fd = new FKEFaceDetector();
+			List<Iterable<Point2d>> facialKeyPoints = new ArrayList<Iterable<Point2d>>();
+			List<Shape> facialShapes = new ArrayList<Shape>();
+
+			int i = 1;
 
 			public void beforeUpdate(MBFImage frame) {
-				List<KEDetectedFace> faces = fd.detectFaces(Transforms.calculateIntensity(frame));
-				for (KEDetectedFace face : faces) {
-					Shape shape = face.getShape();
-					frame.drawShape(shape, RGBColour.RED);
-					Point2d faceOrigin = new Point2dImpl(shape.minX(), shape.minY());
-					FacialKeypoint[] keypoints = face.getKeypoints();
-					for (FacialKeypoint point : keypoints) {
-						point.position.translate(faceOrigin);
-						frame.drawPoint(point.position, RGBColour.WHITE, 10);
+				List<KEDetectedFace> faces = null;
+				if (i % 10 == 0) {
+					faces = fd.detectFaces(Transforms.calculateIntensity(frame));
+					facialShapes = new ArrayList<Shape>();
+					facialKeyPoints = new ArrayList<Iterable<Point2d>>();
+					for (KEDetectedFace face : faces) {
+						Shape shape = face.getShape();
+						facialShapes.add(shape.clone());
+
+						Point2d faceOrigin = new Point2dImpl(shape.minX(), shape.minY());
+
+						FacialKeypoint[] keypoints = face.getKeypoints();
+						ArrayList<Point2d> lpts = new ArrayList<Point2d>();
+						for (FacialKeypoint point : keypoints) {
+							point.position.translate(faceOrigin);
+							lpts.add(point.position.clone());
+						}
+						facialKeyPoints.add(lpts);
 					}
 				}
+
+				for (Shape shape : facialShapes) {
+					frame.drawShape(shape, RGBColour.RED);
+				}
+				for (Iterable<Point2d> keyPoints : facialKeyPoints) {
+					frame.drawPoints(keyPoints, RGBColour.WHITE, 10);
+				}
+				i++;
 			}
 
 			public void afterUpdate(VideoDisplay<MBFImage> display) {
